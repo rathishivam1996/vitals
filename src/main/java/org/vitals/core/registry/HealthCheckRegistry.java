@@ -1,14 +1,12 @@
 package org.vitals.core.registry;
 
+import jakarta.annotation.Nonnull;
+import org.vitals.core.HealthCheck;
+import org.vitals.core.aggregator.HealthResultAggregator;
+import org.vitals.core.filter.HealthCheckFilter;
+
 import java.util.Optional;
 import java.util.Set;
-
-import jakarta.annotation.Nonnull;
-
-import org.vitals.core.aggregator.HealthResultAggregator;
-import org.vitals.core.HealthCheck;
-import org.vitals.core.filter.HealthCheckFilter;
-import org.vitals.core.listener.StatusUpdateListener;
 
 public interface HealthCheckRegistry {
 
@@ -30,10 +28,6 @@ public interface HealthCheckRegistry {
 
     void clearAllHealthChecks();
 
-    void addListener(@Nonnull StatusUpdateListener listener);
-
-    void removeListener(@Nonnull StatusUpdateListener listener);
-
     boolean registerAggregator(@Nonnull HealthResultAggregator aggregator);
 
     boolean isAggregatorRegistered(@Nonnull String name);
@@ -46,4 +40,7 @@ public interface HealthCheckRegistry {
 
     void clearAllAggregators();
 
+    // void addListener(@Nonnull StatusUpdateListener listener);
+    //
+    // void removeListener(@Nonnull StatusUpdateListener listener);
 }

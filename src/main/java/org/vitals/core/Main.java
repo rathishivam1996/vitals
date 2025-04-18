@@ -1,4 +1,4 @@
-package org.vitals;
+package org.vitals.core;
 
 public class Main {
     public static void main(String[] args) {

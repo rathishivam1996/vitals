@@ -1,5 +1,28 @@
 package org.vitals.core;
 
+import jakarta.annotation.Nonnull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.vitals.core.HealthCheck.HealthCheckResult;
+import org.vitals.core.aggregator.HealthResultAggregator;
+import org.vitals.core.annotation.AsyncHealthCheck;
+import org.vitals.core.event.HealthCheckRegisteredEvent;
+import org.vitals.core.event.HealthCheckRemovedEvent;
+import org.vitals.core.event.HealthEvent;
+import org.vitals.core.executor.DefaultHealthCheckExecutor;
+import org.vitals.core.executor.HealthCheckExecutor;
+import org.vitals.core.filter.HealthCheckFilter;
+import org.vitals.core.history.DefaultHealthCheckHistory;
+import org.vitals.core.history.HealthCheckHistory;
+import org.vitals.core.listener.HealthEventListener;
+import org.vitals.core.listener.HealthEventListenerRegistry;
+import org.vitals.core.listener.StatusUpdateDelegate;
+import org.vitals.core.registry.DefaultHealthCheckRegistry;
+import org.vitals.core.registry.HealthCheckRegistry;
+import org.vitals.core.scheduler.DefaultHealthCheckScheduler;
+import org.vitals.core.scheduler.HealthCheckScheduler;
+import org.vitals.core.scheduler.InternalScheduler;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -9,66 +32,43 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.vitals.core.aggregator.HealthResultAggregator;
-import org.vitals.core.annotation.AsyncHealthCheck;
-import org.vitals.core.HealthCheck.HealthCheckResult;
-import org.vitals.core.executor.DefaultHealthCheckExecutor;
-import org.vitals.core.executor.HealthCheckExecutor;
-import org.vitals.core.filter.HealthCheckFilter;
-import org.vitals.core.history.DefaultHealthCheckHistory;
-import org.vitals.core.history.HealthCheckHistory;
-import org.vitals.core.listener.StatusUpdateDelegate;
-import org.vitals.core.listener.StatusUpdateListener;
-import org.vitals.core.registry.DefaultHealthCheckRegistry;
-import org.vitals.core.registry.HealthCheckRegistry;
-import org.vitals.core.scheduler.DefaultHealthCheckScheduler;
-import org.vitals.core.scheduler.HealthCheckScheduler;
-import org.vitals.core.scheduler.VitalsScheduler;
-
-import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
-
 public class HealthCheckManager
-        implements StatusUpdateListener, HealthCheckRegistry, HealthCheckExecutor, HealthCheckScheduler,
-        HealthCheckHistory {
-
-    private final HealthCheckRegistry healthCheckRegistry;
-    private final HealthCheckExecutor healthCheckExecutor;
-    private final DefaultHealthCheckHistory defaultHealthCheckHistory;
-    private final HealthCheckScheduler scheduler;
+        implements HealthEventListener, HealthEventListenerRegistry, HealthCheckRegistry, HealthCheckExecutor,
+        HealthCheckScheduler, HealthCheckHistory {
 
     @SuppressWarnings("unused")
     private static final ScheduledThreadPoolExecutor sharedExecutor;
-    private final VitalsScheduler vitalsScheduler;
-
     private static final Logger logger = LoggerFactory.getLogger(HealthCheckManager.class);
 
     static {
-        sharedExecutor = new ScheduledThreadPoolExecutor(
-                10, // Core pool size
+        sharedExecutor = new ScheduledThreadPoolExecutor(10, // Core pool size
                 new ThreadFactory() {
                     private final AtomicInteger threadCounter = new AtomicInteger(1);
 
                     @Override
-                    public Thread newThread(Runnable r) {
+                    public Thread newThread(@Nonnull Runnable r) {
                         return new Thread(r, "HealthCheck-" + threadCounter.getAndIncrement());
                     }
                 });
     }
 
+    private final HealthCheckRegistry healthCheckRegistry;
+    private final HealthCheckExecutor healthCheckExecutor;
+    private final DefaultHealthCheckHistory defaultHealthCheckHistory;
+    private final HealthCheckScheduler scheduler;
+    private final StatusUpdateDelegate statusUpdateDelegate;
+
     public HealthCheckManager() {
-        this.vitalsScheduler = VitalsScheduler.getInstance();
-        StatusUpdateDelegate statusUpdateDelegate = new StatusUpdateDelegate(this.vitalsScheduler);
+        InternalScheduler internalScheduler = InternalScheduler.getInstance();
+        statusUpdateDelegate = new StatusUpdateDelegate(internalScheduler);
         this.healthCheckRegistry = new DefaultHealthCheckRegistry(statusUpdateDelegate);
 
         this.defaultHealthCheckHistory = new DefaultHealthCheckHistory(5, statusUpdateDelegate, healthCheckRegistry);
-        this.healthCheckExecutor = new DefaultHealthCheckExecutor(
-                this.healthCheckRegistry, statusUpdateDelegate, defaultHealthCheckHistory, this.vitalsScheduler);
+        this.healthCheckExecutor = new DefaultHealthCheckExecutor(this.healthCheckRegistry, statusUpdateDelegate,
+                defaultHealthCheckHistory, internalScheduler);
 
-        this.scheduler = new DefaultHealthCheckScheduler(this.healthCheckExecutor, this.vitalsScheduler);
-        statusUpdateDelegate.addListener(this);
+        this.scheduler = new DefaultHealthCheckScheduler(this.healthCheckExecutor, internalScheduler);
+        statusUpdateDelegate.addListener(this, Set.of(HealthCheckRegisteredEvent.class, HealthCheckRemovedEvent.class));
     }
 
     private void scheduleHealthCheck(@Nonnull String healthCheckName, @Nonnull AsyncHealthCheck asyncConfig) {
@@ -93,48 +93,13 @@ public class HealthCheckManager
 
     @Override
     public void onHealthCheckRemoved(@Nonnull String name, @Nonnull Set<String> tags,
-            @Nonnull HealthCheck healthCheck) {
+                                     @Nonnull HealthCheck healthCheck) {
 
         logger.info("Health check {} removed.", name);
 
         if (this.scheduler.isScheduled(name)) {
             this.scheduler.cancelScheduledHealthCheck(name);
         }
-    }
-
-    @Override
-    public void onHealthChecked(@Nonnull String name, @Nonnull Set<String> tags, @Nonnull HealthCheck healthCheck,
-            @Nonnull HealthCheck.HealthCheckResult healthCheckResult) {
-        logger.info("Health check [ {} ] executed. Result: {}", name, healthCheckResult);
-    }
-
-    @Override
-    public void onHealthCheckFailed(@Nonnull String name, @Nonnull Set<String> tags, @Nonnull HealthCheck healthCheck,
-            @Nullable String message,
-            @Nonnull Throwable throwable) {
-
-        logger.error("Health check [ {} ] failed. Error: {}", name, message);
-    }
-
-    @Override
-    public void onChanged(@Nonnull String name, @Nonnull Set<String> tags, @Nonnull HealthCheck healthCheck,
-            @Nullable HealthCheck.HealthCheckResult original,
-            @Nonnull HealthCheck.HealthCheckResult updated) {
-        logger.info("Health check [ {} ] status changed from {} to {}",
-                (original != null ? original.getStatus() : "UNKNOWN"), updated.getStatus());
-    }
-
-    @Override
-    public void onHealthResultAggregated(@Nonnull String aggregatorName, @Nonnull HealthCheckResult aggregatedResult) {
-        logger.info("Aggregator [ {} ] executed. Result: {}", aggregatorName, aggregatedResult.getStatus());
-    }
-
-    @Override
-    public void onAggregatedResultChanged(@Nonnull String aggregatorName,
-            @Nullable HealthCheckResult previousAggregated, @Nonnull HealthCheckResult updatedAggregated) {
-        logger.info("Aggregator check [ {} ] status changed from {} to {}",
-                (previousAggregated != null ? previousAggregated.getStatus() : "UNKNOWN"),
-                updatedAggregated.getStatus());
     }
 
     // Executor Management
@@ -202,16 +167,6 @@ public class HealthCheckManager
     @Override
     public void clearAllHealthChecks() {
         this.healthCheckRegistry.clearAllHealthChecks();
-    }
-
-    @Override
-    public void addListener(@Nonnull StatusUpdateListener listener) {
-        this.healthCheckRegistry.addListener(listener);
-    }
-
-    @Override
-    public void removeListener(@Nonnull StatusUpdateListener listener) {
-        this.healthCheckRegistry.removeListener(listener);
     }
 
     @Override
@@ -284,6 +239,89 @@ public class HealthCheckManager
     @Override
     public void clearHistory() {
         this.defaultHealthCheckHistory.clearHistory();
+    }
+
+    @Override
+    public void addListener(@Nonnull HealthEventListener listener) {
+        this.statusUpdateDelegate.addListener(listener);
+    }
+
+    @Override
+    public void addListener(@Nonnull HealthEventListener listener, HealthCheckFilter healthCheckFilter) {
+        this.statusUpdateDelegate.addListener(listener, healthCheckFilter);
+    }
+
+    @Override
+    public void removeListener(@Nonnull HealthEventListener listener) {
+        this.statusUpdateDelegate.removeListener(listener);
+    }
+
+    @Override
+    public void addListener(HealthEventListener listener, Class<? extends HealthEvent> eventType) {
+        this.statusUpdateDelegate.addListener(listener, eventType);
+    }
+
+    @Override
+    public void addListener(HealthEventListener listener, Set<Class<? extends HealthEvent>> eventTypes) {
+        this.statusUpdateDelegate.addListener(listener, eventTypes);
+    }
+
+    @Override
+    public void addListener(HealthEventListener listener, HealthCheckFilter filter,
+                            Class<? extends HealthEvent> eventType) {
+        this.statusUpdateDelegate.addListener(listener, filter, eventType);
+    }
+
+    @Override
+    public void addListener(HealthEventListener listener, HealthCheckFilter filter,
+                            Class<? extends HealthEvent>... eventTypes) {
+        this.statusUpdateDelegate.addListener(listener, filter, eventTypes);
+    }
+
+    @Override
+    public void addListener(HealthEventListener listener, HealthCheckFilter filter,
+                            Set<Class<? extends HealthEvent>> eventTypes) {
+        this.statusUpdateDelegate.addListener(listener, filter, eventTypes);
+    }
+
+    @Override
+    public void removeListener(HealthEventListener listener, Class<? extends HealthEvent> eventType) {
+        this.statusUpdateDelegate.removeListener(listener, eventType);
+    }
+
+    @Override
+    public void removeListener(HealthEventListener listener, Class<? extends HealthEvent>... eventTypes) {
+        this.statusUpdateDelegate.removeListener(listener, eventTypes);
+    }
+
+    @Override
+    public void removeListener(HealthEventListener listener, Set<Class<? extends HealthEvent>> eventTypes) {
+        this.statusUpdateDelegate.removeListener(listener, eventTypes);
+    }
+
+    @Override
+    public List<HealthEventListener> listeners(Class<? extends HealthEvent> eventType) {
+        return this.statusUpdateDelegate.listeners(eventType);
+    }
+
+    @Override
+    public boolean isListenerRegistered(HealthEventListener listener, Class<? extends HealthEvent> eventType) {
+        return this.statusUpdateDelegate.isListenerRegistered(listener, eventType);
+    }
+
+    @Override
+    public List<HealthEventListener> listeners() {
+        return this.statusUpdateDelegate.listeners();
+    }
+
+    @Override
+    public boolean isListenerRegistered(HealthEventListener listener) {
+        return this.statusUpdateDelegate.isListenerRegistered(listener);
+    }
+
+    @Override
+    public void clear() {
+        this.statusUpdateDelegate.clear();
     }
 
 }

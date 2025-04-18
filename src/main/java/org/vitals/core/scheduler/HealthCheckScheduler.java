@@ -1,8 +1,8 @@
 package org.vitals.core.scheduler;
 
-import java.util.concurrent.TimeUnit;
-
 import jakarta.annotation.Nonnull;
+
+import java.util.concurrent.TimeUnit;
 
 public interface HealthCheckScheduler {
 

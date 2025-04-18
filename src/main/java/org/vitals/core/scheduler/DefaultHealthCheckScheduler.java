@@ -1,34 +1,31 @@
 package org.vitals.core.scheduler;
 
+import com.google.common.base.Preconditions;
+import jakarta.annotation.Nonnull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.vitals.core.executor.HealthCheckExecutor;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.vitals.core.executor.HealthCheckExecutor;
-
-import com.google.common.base.Preconditions;
-
-import jakarta.annotation.Nonnull;
-
 public class DefaultHealthCheckScheduler implements AutoCloseable, HealthCheckScheduler {
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultHealthCheckScheduler.class);
 
-    private final VitalsScheduler schedulerService;
+    private final InternalScheduler internalScheduler;
     private final HealthCheckExecutor healthCheckExecutor;
     private final Map<String, ScheduledFuture<?>> scheduledTasks;
 
-    public DefaultHealthCheckScheduler(HealthCheckExecutor healthCheckExecutor,
-            VitalsScheduler customScheduler) {
-        this.schedulerService = customScheduler;
+    public DefaultHealthCheckScheduler(HealthCheckExecutor healthCheckExecutor, InternalScheduler internalScheduler) {
+        this.internalScheduler = internalScheduler;
         this.healthCheckExecutor = healthCheckExecutor;
         this.scheduledTasks = new ConcurrentHashMap<>();
     }
 
     public DefaultHealthCheckScheduler(HealthCheckExecutor healthCheckExecutor) {
-        this(healthCheckExecutor, VitalsScheduler.getInstance());
+        this(healthCheckExecutor, InternalScheduler.getInstance());
     }
 
     /**
@@ -55,7 +52,7 @@ public class DefaultHealthCheckScheduler implements AutoCloseable, HealthCheckSc
         }
 
         try {
-            ScheduledFuture<?> scheduledFuture = this.schedulerService.scheduleWithFixedDelay(
+            ScheduledFuture<?> scheduledFuture = this.internalScheduler.scheduleWithFixedDelay(
                     () -> this.healthCheckExecutor.executeAsync(healthCheckName)
                             .thenAccept(result -> LOGGER.info("Scheduled health check executed: {}", result))
                             .exceptionally(ex -> {
@@ -114,7 +111,7 @@ public class DefaultHealthCheckScheduler implements AutoCloseable, HealthCheckSc
 
     @Override
     public void close() {
-        this.schedulerService.shutdown();
+        this.internalScheduler.shutdown();
     }
 
 }

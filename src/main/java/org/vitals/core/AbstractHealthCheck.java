@@ -1,10 +1,10 @@
 package org.vitals.core;
 
-import static org.vitals.core.util.Util.validateName;
-import static org.vitals.core.util.Util.validateTags;
-
 import java.util.Collections;
 import java.util.Set;
+
+import static org.vitals.core.util.Util.validateName;
+import static org.vitals.core.util.Util.validateTags;
 
 public abstract class AbstractHealthCheck implements HealthCheck {
     private final String name;

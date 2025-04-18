@@ -3,48 +3,41 @@ package org.vitals.test;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import org.vitals.core.aggregator.MostSevereStateAggregator;
-import org.vitals.core.aggregator.WeightedScoringAggregator;
 import org.vitals.core.HealthCheck;
 import org.vitals.core.HealthCheckManager;
+import org.vitals.core.aggregator.MostSevereStateAggregator;
+import org.vitals.core.aggregator.WeightedScoringAggregator;
+import org.vitals.core.event.HealthCheckCheckedEvent;
+import org.vitals.core.event.HealthCheckFailedEvent;
+import org.vitals.core.filter.HealthCheckFilter;
 
 public class Main {
         public static void main(String[] args) throws InterruptedException {
+                HealthCheckManager healthCheckManager = new HealthCheckManager();
 
-                CacheHealthCheck cacheHealthCheck = new CacheHealthCheck("cache", "cachi1", "cache2", "tag1", "tag2");
-
-                SampleHealthCheck sampleHealthCheck = new SampleHealthCheck("sample",
-                                "sample1", "sample2", "tag1", "tag3");
-
-                DatabaseHealthCheck databaseHealthCheck = new DatabaseHealthCheck("database",
-                                "database1", "database2", "tag2");
-
-                APIHealthCheck apiHealthCheck = new APIHealthCheck("api",
-                                "api1", "api2", "tag3");
-
+                GitHubAPIHealthCheck apiHealthCheck = new GitHubAPIHealthCheck("API Health Check", "API", "Test-Tag-1",
+                        "Test-Tag-2");
+                DatabaseHealthCheck databaseHealthCheck = new DatabaseHealthCheck("Database Health Check", "DB1",
+                        "Test-Tag-1");
                 MostSevereStateAggregator mostSevereStateAggregator = new MostSevereStateAggregator();
                 WeightedScoringAggregator weightedScoringAggregator = new WeightedScoringAggregator();
 
-                HealthCheckManager healthCheckManager = new HealthCheckManager();
+                HealthCheckFilter gitHubNameFilter = HealthCheckFilter.and((context -> context.tags().contains("API")),
+                        context -> context.tags().contains("github"));
 
-                healthCheckManager.registerHealthCheck(cacheHealthCheck);
-                healthCheckManager.registerHealthCheck(sampleHealthCheck);
-                healthCheckManager.registerHealthCheck(databaseHealthCheck);
+                HealthCheckFilter tagFilter = HealthCheckFilter.or((context) -> context.tags().contains("Test-Tag-2"),
+                        (context -> context.tags().contains("Test-Tag-2")));
+
+                healthCheckManager.addListener(new ConsoleStatusUpdateListener(), tagFilter,
+                        Set.of(HealthCheckCheckedEvent.class, HealthCheckFailedEvent.class));
                 healthCheckManager.registerHealthCheck(apiHealthCheck);
+                healthCheckManager.registerHealthCheck(databaseHealthCheck);
                 healthCheckManager.registerAggregator(mostSevereStateAggregator);
                 healthCheckManager.registerAggregator(weightedScoringAggregator);
 
-                Set<CompletableFuture<HealthCheck.HealthCheckResult>> tag1Res = healthCheckManager
-                                .executeAsync((context -> context.tags().contains("tag1")));
-                CompletableFuture<HealthCheck.HealthCheckResult> databaseRes = healthCheckManager
-                                .executeAsync("database");
+                Set<CompletableFuture<HealthCheck.HealthCheckResult>> futures = healthCheckManager.executeAsync(tagFilter);
 
-                // log the results usinng slf4j logger
-                tag1Res.forEach(result -> result.thenAccept(r -> System.out.println("tag1Res: " + r)));
-                databaseRes.thenAccept(r -> System.out.println("databaseRes: " + r));
-
-                while(true) {
-
+                while (true) {
                 }
 
         }

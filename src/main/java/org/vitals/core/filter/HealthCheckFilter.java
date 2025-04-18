@@ -9,18 +9,15 @@ import java.util.Arrays;
 public interface HealthCheckFilter {
 
     /**
-     * Determines if a health check matches the filter criteria.
-     *
-     * @param context The filter context containing metadata about the health check.
-     * @return true if the health check matches the criteria, false otherwise.
+     * Filter that matches any health check.
      */
-    boolean matches(HealthCheckFilterContext context);
+    HealthCheckFilter ALL = context -> true;
 
     /**
      * Combines multiple filters with logical AND.
      *
      * @param filters The filters to combine.
-     * @return A filter that matches only if all of the filters match.
+     * @return A filter that matches only if all the filters match.
      */
     static HealthCheckFilter and(HealthCheckFilter... filters) {
         return context -> Arrays.stream(filters).allMatch(filter -> filter.matches(context));
@@ -47,11 +44,6 @@ public interface HealthCheckFilter {
     }
 
     /**
-     * Filter that matches any health check.
-     */
-    HealthCheckFilter ALL = context -> true;
-
-    /**
      * Combines multiple filters with logical OR (alias for `or`).
      *
      * @param filters The filters to combine.
@@ -65,11 +57,19 @@ public interface HealthCheckFilter {
      * Combines multiple filters with logical AND (alias for `and`).
      *
      * @param filters The filters to combine.
-     * @return A filter that matches only if all of the filters match.
+     * @return A filter that matches only if all the filters match.
      */
     static HealthCheckFilter allOf(HealthCheckFilter... filters) {
         return and(filters);
     }
+
+    /**
+     * Determines if a health check matches the filter criteria.
+     *
+     * @param context The filter context containing metadata about the health check.
+     * @return true if the health check matches the criteria, false otherwise.
+     */
+    boolean matches(HealthCheckFilterContext context);
 
 }
 

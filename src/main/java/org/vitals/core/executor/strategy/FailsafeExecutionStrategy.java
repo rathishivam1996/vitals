@@ -1,11 +1,11 @@
 package org.vitals.core.executor.strategy;
 
-import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-
 import dev.failsafe.Failsafe;
 import dev.failsafe.FailsafeExecutor;
 import dev.failsafe.RetryPolicy;
+
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * An implementation of {@link ExecutionStrategy} that uses the Failsafe library

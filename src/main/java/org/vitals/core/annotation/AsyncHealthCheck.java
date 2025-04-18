@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 import java.util.concurrent.TimeUnit;
 
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.TYPE })
+@Target({ElementType.TYPE})
 public @interface AsyncHealthCheck {
 
     long period();

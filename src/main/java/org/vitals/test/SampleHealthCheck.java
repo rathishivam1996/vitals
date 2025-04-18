@@ -22,10 +22,7 @@ public class SampleHealthCheck extends AbstractHealthCheck {
 
             boolean isHealthy = random.nextBoolean();
             if (isHealthy) {
-                return HealthCheckResult.builder()
-                        .status(HealthStatus.HEALTHY)
-                        .message("Sample is healthy")
-                        .build();
+                return HealthCheckResult.builder().status(HealthStatus.HEALTHY).message("Sample is healthy").build();
             } else {
                 return HealthCheckResult.builder()
                         .status(HealthStatus.UNHEALTHY)

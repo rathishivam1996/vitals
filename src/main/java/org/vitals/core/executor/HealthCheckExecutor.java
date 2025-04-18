@@ -1,12 +1,11 @@
 package org.vitals.core.executor;
 
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-
 import jakarta.annotation.Nonnull;
-
 import org.vitals.core.HealthCheck;
 import org.vitals.core.filter.HealthCheckFilter;
+
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 public interface HealthCheckExecutor {
 

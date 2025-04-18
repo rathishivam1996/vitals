@@ -1,9 +1,9 @@
 package org.vitals.test;
 
+import org.vitals.core.AbstractHealthCheck;
+
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
-
-import org.vitals.core.AbstractHealthCheck;
 
 public class CacheHealthCheck extends AbstractHealthCheck {
 

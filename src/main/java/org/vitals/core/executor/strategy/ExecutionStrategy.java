@@ -14,7 +14,7 @@ public interface ExecutionStrategy {
      * @param <T>      the type of healthCheckResult produced by the task
      * @param supplier a supplier that provides the task to execute
      * @return a {@link CompletableFuture} containing the healthCheckResult of the
-     *         task
+     * task
      * @throws Exception if the task fails
      */
     <T> CompletableFuture<T> executeWithStrategy(CheckedSupplier<CompletableFuture<T>> supplier) throws Exception;

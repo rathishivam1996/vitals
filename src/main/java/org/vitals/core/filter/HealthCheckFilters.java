@@ -1,14 +1,13 @@
 package org.vitals.core.filter;
 
+import com.google.common.base.Preconditions;
+import org.vitals.core.HealthCheck;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
-
-import org.vitals.core.HealthCheck;
-
-import com.google.common.base.Preconditions;
 
 public class HealthCheckFilters {
 

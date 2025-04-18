@@ -1,19 +1,18 @@
 package org.vitals.test;
 
-import java.util.Set;
-
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-
 import org.vitals.core.HealthCheck;
 import org.vitals.core.HealthCheck.HealthCheckResult;
-import org.vitals.core.listener.StatusUpdateListener;
+import org.vitals.core.listener.HealthEventListener;
 
-public class ConsoleStatusUpdateListener implements StatusUpdateListener {
+import java.util.Set;
+
+public class ConsoleStatusUpdateListener implements HealthEventListener {
 
     @Override
     public void onHealthChecked(@Nonnull String name, @Nonnull Set<String> tags, @Nonnull HealthCheck healthCheck,
-            @Nonnull HealthCheckResult healthCheckResult) {
+                                @Nonnull HealthCheckResult healthCheckResult) {
         System.out.println();
         System.out.println("Health checked: " + name + ", Tags: " + tags + ", Result: " + healthCheckResult);
         System.out.println();
@@ -22,7 +21,7 @@ public class ConsoleStatusUpdateListener implements StatusUpdateListener {
 
     @Override
     public void onHealthCheckFailed(@Nonnull String name, @Nonnull Set<String> tags, @Nonnull HealthCheck healthCheck,
-            @Nullable String message, @Nonnull Throwable throwable) {
+                                    @Nullable String message, @Nonnull Throwable throwable) {
         System.out.println();
 
         System.out.println("Health check failed: " + name + ", Tags: " + tags + ", Message: " + message);
@@ -33,11 +32,11 @@ public class ConsoleStatusUpdateListener implements StatusUpdateListener {
 
     @Override
     public void onChanged(@Nonnull String name, @Nonnull Set<String> tags, @Nonnull HealthCheck healthCheck,
-            @Nullable HealthCheckResult original, @Nonnull HealthCheckResult updated) {
+                          @Nullable HealthCheckResult original, @Nonnull HealthCheckResult updated) {
         System.out.println();
 
-        System.out.println("Health check changed: " + name + ", Tags: " + tags + ", Original: " + original
-                + ", Updated: " + updated);
+        System.out.println(
+                "Health check changed: " + name + ", Tags: " + tags + ", Original: " + original + ", Updated: " + updated);
         System.out.println();
 
     }
@@ -57,11 +56,12 @@ public class ConsoleStatusUpdateListener implements StatusUpdateListener {
 
     @Override
     public void onAggregatedResultChanged(@Nonnull String aggregatorName,
-            @Nullable HealthCheckResult previousAggregated, @Nonnull HealthCheckResult updatedAggregated) {
+                                          @Nullable HealthCheckResult previousAggregated,
+                                          @Nonnull HealthCheckResult updatedAggregated) {
 
         System.out.println();
-        System.out.println("Aggregated result changed: " + aggregatorName + ", Previous: " + previousAggregated
-                + ", Updated: " + updatedAggregated);
+        System.out.println(
+                "Aggregated result changed: " + aggregatorName + ", Previous: " + previousAggregated + ", Updated: " + updatedAggregated);
         System.out.println();
     }
 }

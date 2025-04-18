@@ -1,29 +1,14 @@
 package org.vitals.core.listener;
 
-import java.util.EventListener;
-import java.util.Set;
-
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-
 import org.vitals.core.HealthCheck;
 import org.vitals.core.HealthCheck.HealthCheckResult;
 
-/**
- * Callbacks which receive notification of changes to dependencies. You can add
- * a
- * StatusUpdateListener to a {@link StatusUpdateProducer}, such as
- * {@link AbstractDependencyManager}
- * or {@link DependencyPinger}.
- *
- * <p>
- * Note that the order in which callbacks are received isn't strictly defined so
- * you should not
- * rely on any particular call ordering when implementing the callback methods.
- *
- * @see AbstractStatusUpdateListener
- */
-public interface StatusUpdateListener extends EventListener {
+import java.util.EventListener;
+import java.util.Set;
+
+public interface HealthEventListener extends EventListener {
 
         /**
          * Triggered each and every time the status of a dependency is checked.
@@ -33,13 +18,15 @@ public interface StatusUpdateListener extends EventListener {
          * @param healthCheck       The HealthCheck that was checked.
          * @param healthCheckResult The healthCheckResult of the HealthCheck.
          */
-        void onHealthChecked(@Nonnull final String name, @Nonnull Set<String> tags,
-                        @Nonnull final HealthCheck healthCheck,
-                        @Nonnull final HealthCheckResult healthCheckResult);
+        default void onHealthChecked(@Nonnull final String name, @Nonnull Set<String> tags,
+                                     @Nonnull final HealthCheck healthCheck,
+                                     @Nonnull final HealthCheckResult healthCheckResult) {
+        }
 
-        void onHealthCheckFailed(@Nonnull final String name, @Nonnull Set<String> tags,
-                        @Nonnull final HealthCheck healthCheck,
-                        @Nullable final String message, @Nonnull final Throwable throwable);
+        default void onHealthCheckFailed(@Nonnull final String name, @Nonnull Set<String> tags,
+                                         @Nonnull final HealthCheck healthCheck, @Nullable final String message,
+                                         @Nonnull final Throwable throwable) {
+        }
 
         /**
          * Triggered when the status of a dependency has changed.
@@ -49,8 +36,10 @@ public interface StatusUpdateListener extends EventListener {
          * @param original    The previous healthCheckResult of the HealthCheck.
          * @param updated     The new healthCheckResult of the HealthCheck.
          */
-        void onChanged(@Nonnull final String name, @Nonnull Set<String> tags, @Nonnull final HealthCheck healthCheck,
-                        @Nullable final HealthCheckResult original, @Nonnull final HealthCheckResult updated);
+        default void onChanged(@Nonnull final String name, @Nonnull Set<String> tags,
+                               @Nonnull final HealthCheck healthCheck,
+                               @Nullable final HealthCheckResult original, @Nonnull final HealthCheckResult updated) {
+        }
 
         /**
          * Triggered when a new dependency is added
@@ -58,7 +47,9 @@ public interface StatusUpdateListener extends EventListener {
          * @param name        The healthCheckName of HealthCheck being added.
          * @param healthCheck The HealthCheck being added.
          */
-        void onHealthCheckAdded(@Nonnull String name, @Nonnull Set<String> tags, @Nonnull HealthCheck healthCheck);
+        default void onHealthCheckAdded(@Nonnull String name, @Nonnull Set<String> tags,
+                                        @Nonnull HealthCheck healthCheck) {
+        }
 
         /**
          * Triggered when a health result is aggregated.
@@ -66,8 +57,9 @@ public interface StatusUpdateListener extends EventListener {
          * @param aggregatorName   The name of the aggregator.
          * @param aggregatedResult The aggregated health result.
          */
-        void onHealthResultAggregated(@Nonnull String aggregatorName,
-                        @Nonnull HealthCheck.HealthCheckResult aggregatedResult);
+        default void onHealthResultAggregated(@Nonnull String aggregatorName,
+                                              @Nonnull HealthCheckResult aggregatedResult) {
+        }
 
         /**
          * Triggered when an aggregated health result changes.
@@ -76,9 +68,10 @@ public interface StatusUpdateListener extends EventListener {
          * @param previousAggregated The previous aggregated health result.
          * @param updatedAggregated  The new aggregated health result.
          */
-        void onAggregatedResultChanged(@Nonnull String aggregatorName,
-                        @Nullable HealthCheck.HealthCheckResult previousAggregated,
-                        @Nonnull HealthCheck.HealthCheckResult updatedAggregated);
+        default void onAggregatedResultChanged(@Nonnull String aggregatorName,
+                                               @Nullable HealthCheckResult previousAggregated,
+                                               @Nonnull HealthCheckResult updatedAggregated) {
+        }
 
         /**
          * Triggered when a dependency is removed
@@ -87,7 +80,7 @@ public interface StatusUpdateListener extends EventListener {
          * @param healthCheck The HealthCheck being removed.
          */
         default void onHealthCheckRemoved(@Nonnull String name, @Nonnull Set<String> tags,
-                        @Nonnull HealthCheck healthCheck) {
+                                          @Nonnull HealthCheck healthCheck) {
         }
 
         /**

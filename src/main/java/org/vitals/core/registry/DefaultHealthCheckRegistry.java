@@ -1,6 +1,15 @@
 package org.vitals.core.registry;
 
-import static org.vitals.core.util.Util.validateName;
+import com.google.common.base.Preconditions;
+import jakarta.annotation.Nonnull;
+import org.vitals.core.HealthCheck;
+import org.vitals.core.aggregator.HealthResultAggregator;
+import org.vitals.core.event.AllHealthChecksClearedEvent;
+import org.vitals.core.event.HealthCheckRegisteredEvent;
+import org.vitals.core.event.HealthCheckRemovedEvent;
+import org.vitals.core.event.HealthEventPublisher;
+import org.vitals.core.filter.HealthCheckFilter;
+import org.vitals.core.filter.HealthCheckFilterContext;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -10,27 +19,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
-import org.vitals.core.aggregator.HealthResultAggregator;
-import org.vitals.core.HealthCheck;
-import org.vitals.core.filter.HealthCheckFilter;
-import org.vitals.core.filter.HealthCheckFilterContext;
-import org.vitals.core.listener.StatusUpdateDelegate;
-import org.vitals.core.listener.StatusUpdateListener;
-
-import com.google.common.base.Preconditions;
-
-import jakarta.annotation.Nonnull;
+import static org.vitals.core.util.Util.validateName;
 
 public class DefaultHealthCheckRegistry implements HealthCheckRegistry {
 
     private final ConcurrentMap<String, HealthCheck> healthChecks;
     private final ConcurrentMap<String, HealthResultAggregator> aggregators;
-    private final StatusUpdateDelegate statusUpdateDelegate;
+    private final HealthEventPublisher domainEventPublisher;
 
-    public DefaultHealthCheckRegistry(StatusUpdateDelegate statusUpdateDelegate) {
+    public DefaultHealthCheckRegistry(HealthEventPublisher domainEventPublisher) {
         this.healthChecks = new ConcurrentHashMap<>();
         this.aggregators = new ConcurrentHashMap<>();
-        this.statusUpdateDelegate = statusUpdateDelegate;
+        this.domainEventPublisher = domainEventPublisher;
     }
 
     @Override
@@ -39,7 +39,8 @@ public class DefaultHealthCheckRegistry implements HealthCheckRegistry {
 
         HealthCheck existing = this.healthChecks.putIfAbsent(healthCheck.getName(), healthCheck);
         if (existing == null) {
-            this.statusUpdateDelegate.onHealthCheckAdded(healthCheck.getName(), healthCheck.getTags(), healthCheck);
+            this.domainEventPublisher
+                    .publish(new HealthCheckRegisteredEvent(healthCheck.getName(), healthCheck.getTags(), healthCheck));
             return true;
         }
         return false;
@@ -58,7 +59,7 @@ public class DefaultHealthCheckRegistry implements HealthCheckRegistry {
         validateName(name);
         HealthCheck removed = this.healthChecks.remove(name);
         if (removed != null) {
-            this.statusUpdateDelegate.onHealthCheckRemoved(name, removed.getTags(), removed);
+            this.domainEventPublisher.publish(new HealthCheckRemovedEvent(name, removed.getTags(), removed));
             return Optional.of(removed);
         }
         return Optional.empty();
@@ -80,7 +81,7 @@ public class DefaultHealthCheckRegistry implements HealthCheckRegistry {
             String name = entry.getKey();
             HealthCheck removed = this.healthChecks.remove(name);
             if (removed != null) {
-                this.statusUpdateDelegate.onHealthCheckRemoved(name, removed.getTags(), removed);
+                this.domainEventPublisher.publish(new HealthCheckRemovedEvent(name, removed.getTags(), removed));
                 removedChecks.add(removed);
             }
         }
@@ -116,26 +117,26 @@ public class DefaultHealthCheckRegistry implements HealthCheckRegistry {
     @Override
     public synchronized void clearAllHealthChecks() {
         this.healthChecks.clear();
-        this.statusUpdateDelegate.onAllHealthChecksCleared();
+        this.domainEventPublisher.publish(new AllHealthChecksClearedEvent());
     }
 
     private HealthCheckFilterContext createContext(HealthCheck healthCheck) {
         return new HealthCheckFilterContext(healthCheck.getName(), healthCheck, null, healthCheck.getTags());
     }
 
-    @Override
-    public void addListener(@Nonnull StatusUpdateListener listener) {
-        Preconditions.checkNotNull(listener, "Listener must not be null");
-
-        this.statusUpdateDelegate.addListener(listener);
-    }
-
-    @Override
-    public void removeListener(@Nonnull StatusUpdateListener listener) {
-        Preconditions.checkNotNull(listener, "Listener must not be null");
-
-        this.statusUpdateDelegate.removeListener(listener);
-    }
+    // @Override
+    // public void addListener(@Nonnull StatusUpdateListener listener) {
+    // Preconditions.checkNotNull(listener, "Listener must not be null");
+    //
+    // this.statusUpdateDelegate.addListener(listener);
+    // }
+    //
+    // @Override
+    // public void removeListener(@Nonnull StatusUpdateListener listener) {
+    // Preconditions.checkNotNull(listener, "Listener must not be null");
+    //
+    // this.statusUpdateDelegate.removeListener(listener);
+    // }
 
     @Override
     public boolean registerAggregator(@Nonnull HealthResultAggregator healthResultAggregator) {

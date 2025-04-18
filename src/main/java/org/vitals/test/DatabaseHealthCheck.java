@@ -1,10 +1,12 @@
 package org.vitals.test;
 
+import org.vitals.core.AbstractHealthCheck;
+import org.vitals.core.annotation.AsyncHealthCheck;
+
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import org.vitals.core.AbstractHealthCheck;
-
+@AsyncHealthCheck(period = 5, initialDelay = 0)
 public class DatabaseHealthCheck extends AbstractHealthCheck {
 
     public DatabaseHealthCheck(String name, String... tags) {
@@ -22,10 +24,7 @@ public class DatabaseHealthCheck extends AbstractHealthCheck {
 
             boolean isHealthy = random.nextBoolean();
             if (isHealthy) {
-                return HealthCheckResult.builder()
-                        .status(HealthStatus.HEALTHY)
-                        .message("Database is healthy")
-                        .build();
+                return HealthCheckResult.builder().status(HealthStatus.HEALTHY).message("Database is healthy").build();
             } else {
                 return HealthCheckResult.builder()
                         .status(HealthStatus.UNHEALTHY)

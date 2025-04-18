@@ -1,10 +1,9 @@
 package org.vitals.core.util;
 
-import java.util.Set;
-
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 
-import com.google.common.base.Preconditions;
+import java.util.Set;
 
 public class Util {
     private Util() {

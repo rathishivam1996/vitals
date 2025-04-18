@@ -1,10 +1,10 @@
 package org.vitals.core.aggregator;
 
-import java.util.Map;
-
 import org.vitals.core.HealthCheck;
 import org.vitals.core.HealthCheck.HealthCheckResult;
 import org.vitals.core.HealthCheck.HealthStatus;
+
+import java.util.Map;
 
 public class WeightedScoringAggregator implements HealthResultAggregator {
 

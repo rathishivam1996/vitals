@@ -1,13 +1,12 @@
 package org.vitals.core.history;
 
-import java.util.List;
-import java.util.Set;
-
 import jakarta.annotation.Nonnull;
-
 import org.vitals.core.HealthCheck;
 import org.vitals.core.HealthCheck.HealthCheckResult;
 import org.vitals.core.filter.HealthCheckFilter;
+
+import java.util.List;
+import java.util.Set;
 
 public interface HealthCheckHistory {
 
